@@ -40,6 +40,13 @@ type DefaultParams = {
   undefined: undefined
 }
 
+export type TypedTemplateObj<TArgs> = {
+  toString(args: TArgs): string
+}
+
+export type ArgsFrom<TTemplate extends TypedTemplateObj<unknown>> =
+  TTemplate extends TypedTemplateObj<infer TArgs> ? TArgs : never
+
 const buildTemplate = (
   templateParts: readonly string[],
   paramTypes: string[],
@@ -56,21 +63,17 @@ const buildTemplate = (
 export function CustomTypedTemplate<TParamTypes extends TemplateParamTypes>() {
   return function TypedTemplate<
     TArgs extends TemplateParam<TParamTypes, any, any>[],
-  >(templateStr: TemplateStringsArray, ...params: TArgs) {
+  >(
+    templateStr: TemplateStringsArray,
+    ...params: TArgs
+  ): TypedTemplateObj<MapParams<TParamTypes & DefaultParams, TArgs>> {
     return {
-      toString(args: MapParams<TParamTypes & DefaultParams, TArgs>) {
+      toString(args) {
         return buildTemplate(
           templateStr,
           params,
           args as unknown as Record<string, unknown>,
         )
-        // return templateStr.reduce((acc, cur, i) => {
-        //   if (i >= params.length) {
-        //     return `${acc}${cur}`
-        //   } else {
-        //     return `${acc}${cur}${(args as any)[params[i].split(':')[0]]}`
-        //   }
-        // }, '')
       },
     }
   }

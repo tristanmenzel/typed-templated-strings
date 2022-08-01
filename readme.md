@@ -43,4 +43,58 @@ const template = MyTypedTemplate`Now you can use a parameter with custom types. 
 console.log(template.toString({arg:new MyClass(5)}))
 ```
 
+## Putting it to use
+
+```ts
+import { CustomTypedTemplate, ArgsFrom } from 'typed-templated-strings'
+
+class FormattedDate{
+  format: Intl.DateTimeFormat
+  constructor(public date:Date, locale = 'en-AU') {
+    this.format = new Intl.DateTimeFormat(locale)
+  }
+  toString() {
+    return this.format.format(this.date)
+  }
+}
+
+// You can declare re-usable param types
+const Params = {
+  FirstName: 'firstName:string' as const,
+  LastName: 'lastName:string' as const,
+  Birthday: 'birthday:formattedDate' as const
+}
+
+// Create your custom typed template which maps any custom types to an alias
+const TypedTemplate = CustomTypedTemplate<{
+  formattedDate: FormattedDate
+}>()
+
+// Define a bunch of templates
+const Templates = {
+  Welcome: TypedTemplate`Hello ${Params.FirstName} ${Params.LastName}, welcome to the site`,
+  Birthday: TypedTemplate`Hello ${Params.FirstName}, Wishing you a very happy birthday on ${Params.Birthday}!`
+}
+
+// Alias the type of our template dictionary
+type TemplatesType = typeof Templates
+
+// Use the ArgsFrom utility type to extract arg types from a template
+function sendTemplatedEmail<TTemplateName extends keyof TemplatesType>(templateName: TTemplateName, args: ArgsFrom<TemplatesType[TTemplateName]>) {
+  /* we have to cast args here as `TTemplateName` is an open generic meaning our args type is a union of all possible templates, however when we call sendTemplatedEmail we close the generic and the type of args will be inferred correctly. */
+  const body = Templates[templateName].toString(args as any)
+  // Do something with 'body'
+}
+
+// Invoke the function. Note that missing and/or incorrectly typed parameters are detected by typescript
+sendTemplatedEmail('Welcome', {
+  firstName: 'Billy',
+  lastName: 'Joel',    
+})
+sendTemplatedEmail('Birthday', {
+  firstName: 'Sally',
+  birthday: new FormattedDate(new Date('2000-01-01'))
+})
+```
+
 
